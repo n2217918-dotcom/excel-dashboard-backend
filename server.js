@@ -11,15 +11,31 @@ app.use(cors());
 
 const PORT = process.env.PORT || 5000;
 
-// 🔹 GOOGLE DRIVE AUTH (SERVICE ACCOUNT)
+/* ================================
+   GOOGLE AUTH (FIXED FOR RENDER)
+================================ */
+
+// ✅ Parse credentials JSON from env
+if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  throw new Error("❌ GOOGLE_APPLICATION_CREDENTIALS_JSON is missing");
+}
+
+const credentials = JSON.parse(
+  process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
+);
+
+// ✅ Correct auth setup
 const auth = new google.auth.GoogleAuth({
-  keyFile: process.env.GOOGLE_APPLICATION_CREDENTIALS,
-  scopes: ["https://www.googleapis.com/auth/drive.readonly"]
+  credentials,
+  scopes: ["https://www.googleapis.com/auth/drive.readonly"],
 });
 
 const drive = google.drive({ version: "v3", auth });
 
-// 🔹 FILE MAP (GOOGLE DRIVE BASED)
+/* ================================
+   GOOGLE DRIVE FILE MAP
+================================ */
+
 const FILES = [
   { name: "CFT-1", fileId: "1ZzOgrZgjAKXkM4c2KF4Gg34V16_71rB2", type: "CFT" },
   { name: "CFT-2", fileId: "1aPQLnQvDdBMMlhifoWXNu-MBRRWCBRir", type: "CFT" },
@@ -31,7 +47,10 @@ const FILES = [
   { name: "BI AXIAL-CV", fileId: "17I8YfQMlgMP_RKuRIkZVQw9lse3psGWK", type: "OTHER" }
 ];
 
-// 🔹 REMOVE LABELS FROM EXCEL CELL VALUES
+/* ================================
+   HELPERS
+================================ */
+
 function cleanValue(value) {
   if (!value) return "";
   return String(value)
@@ -44,16 +63,17 @@ function cleanValue(value) {
     .trim();
 }
 
-// 🔹 DOWNLOAD EXCEL FROM GOOGLE DRIVE (BUFFER)
+// 🔹 Download Excel file from Drive
 async function downloadExcel(fileId) {
   const res = await drive.files.get(
     { fileId, alt: "media" },
     { responseType: "arraybuffer" }
   );
+
   return Buffer.from(res.data);
 }
 
-// 🔹 READ DATA FROM EXCEL BUFFER
+// 🔹 Read Excel buffer
 function readExcelFromBuffer(buffer, type) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -61,30 +81,32 @@ function readExcelFromBuffer(buffer, type) {
   const baseData = {
     wheelCode: cleanValue(sheet["B7"]?.v),
     wheelSize: cleanValue(sheet["B8"]?.v),
-    testReason: cleanValue(sheet["B37"]?.v)
+    testReason: cleanValue(sheet["B37"]?.v),
   };
 
   if (type === "CFT") {
     return {
       ...baseData,
       bendingMovement: cleanValue(sheet["B30"]?.v),
-      testLoad: null
-    };
-  } else {
-    return {
-      ...baseData,
-      bendingMovement: null,
-      testLoad: cleanValue(sheet["B20"]?.v)
+      testLoad: null,
     };
   }
+
+  return {
+    ...baseData,
+    bendingMovement: null,
+    testLoad: cleanValue(sheet["B20"]?.v),
+  };
 }
 
-// 🔹 ROOT ROUTE
+/* ================================
+   ROUTES
+================================ */
+
 app.get("/", (req, res) => {
   res.send("✅ Backend is running successfully");
 });
 
-// 🔹 DASHBOARD API
 app.get("/api/dashboard-data", async (req, res) => {
   try {
     const result = {};
@@ -95,18 +117,23 @@ app.get("/api/dashboard-data", async (req, res) => {
 
       result[file.name] = {
         machine: file.name,
-        ...data
+        ...data,
       };
     }
 
     res.json(result);
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Failed to read Excel files from Drive" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      error: "Failed to read Excel files from Drive",
+    });
   }
 });
 
-// 🔹 START SERVER
+/* ================================
+   START SERVER
+================================ */
+
 app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
+  console.log(`🚀 Backend running on port ${PORT}`);
 });

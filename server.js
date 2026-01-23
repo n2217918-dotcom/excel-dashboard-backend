@@ -98,15 +98,42 @@ app.get("/api/dashboard-data", async (req, res) => {
   try {
     const result = {};
 
-    for (const file of FILES) {
-      const buffer = await downloadExcel(file.fileId);
-      const data = readExcel(buffer, file.type);
+   for (const file of FILES) {
+  const buffer = await downloadExcel(file.fileId);
+  const data = readExcelFromBuffer(buffer, file.type);
 
-      result[file.name] = {
-        machine: file.name,
-        ...data,
-      };
-    }
+  // CFT + BI AXIAL → direct mapping
+  if (!file.name.startsWith("RFT")) {
+    result[file.name] = {
+      machine: file.name,
+      ...data,
+    };
+    continue;
+  }
+
+  // RFT GROUPS (EXACT DASHBOARD NAMES)
+  if (file.name === "RFT-1&2") {
+    result["RFT-1&2"] = {
+      machine: "RFT-1&2",
+      ...data,
+    };
+  }
+
+  if (file.name === "RFT-3&4") {
+    result["RFT-3&4"] = {
+      machine: "RFT-3&4",
+      ...data,
+    };
+  }
+
+  if (file.name === "RFT-5&6") {
+    result["RFT-5&6"] = {
+      machine: "RFT-5&6",
+      ...data,
+    };
+  }
+}
+
 
     res.json(result);
   } catch (err) {

@@ -1,21 +1,19 @@
-// ================= LOAD ENV =================
 require("dotenv").config();
 
-// ================= IMPORTS =================
 const express = require("express");
-const cors = require("cors");
 const XLSX = require("xlsx");
+const cors = require("cors");
 const { google } = require("googleapis");
 
-// ================= APP =================
 const app = express();
 app.use(cors());
 
 const PORT = process.env.PORT || 5000;
 
-// ================= GOOGLE AUTH =================
+/* ================= GOOGLE AUTH ================= */
+
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-  throw new Error("Missing GOOGLE_APPLICATION_CREDENTIALS_JSON");
+  throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON missing");
 }
 
 const credentials = JSON.parse(
@@ -29,7 +27,8 @@ const auth = new google.auth.GoogleAuth({
 
 const drive = google.drive({ version: "v3", auth });
 
-// ================= FILE MAP (MATCH EXCEL EXACTLY) =================
+/* ================= FILE MAP ================= */
+
 const FILES = [
   { name: "CFT-1", fileId: "1ZzOgrZgjAKXkM4c2KF4Gg34V16_71rB2", type: "CFT" },
   { name: "CFT-2", fileId: "1aPQLnQvDdBMMlhifoWXNu-MBRRWCBRir", type: "CFT" },
@@ -43,14 +42,15 @@ const FILES = [
   { name: "BI AXIAL-CV", fileId: "17I8YfQMlgMP_RKuRIkZVQw9lse3psGWK", type: "OTHER" },
 ];
 
+/* ================= HELPERS ================= */
 
-// ================= HELPERS =================
-function cleanValue(value) {
+function clean(value) {
   if (!value) return "";
   return String(value)
     .replace(/WHEEL CODE\s*:/i, "")
     .replace(/WHEEL SIZE\s*:/i, "")
     .replace(/TEST REASON\s*:/i, "")
+    .replace(/BENDING MOMENT\s*:/i, "")
     .replace(/BENDING MOVEMENT\s*:/i, "")
     .replace(/TEST LOAD\s*:/i, "")
     .trim();
@@ -64,20 +64,21 @@ async function downloadExcel(fileId) {
   return Buffer.from(res.data);
 }
 
-function readExcel(buffer, type) {
+/* 🔴 THIS FUNCTION WAS MISSING */
+function readExcelFromBuffer(buffer, type) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
   const base = {
-    wheelCode: cleanValue(sheet["B7"]?.v),
-    wheelSize: cleanValue(sheet["B8"]?.v),
-    testReason: cleanValue(sheet["B37"]?.v),
+    wheelCode: clean(sheet["B7"]?.v),
+    wheelSize: clean(sheet["B8"]?.v),
+    testReason: clean(sheet["B37"]?.v),
   };
 
   if (type === "CFT") {
     return {
       ...base,
-      bendingMovement: cleanValue(sheet["B30"]?.v),
+      bendingMovement: clean(sheet["B30"]?.v),
       testLoad: null,
     };
   }
@@ -85,55 +86,29 @@ function readExcel(buffer, type) {
   return {
     ...base,
     bendingMovement: null,
-    testLoad: cleanValue(sheet["B20"]?.v),
+    testLoad: clean(sheet["B20"]?.v),
   };
 }
 
-// ================= ROUTES =================
+/* ================= ROUTES ================= */
+
 app.get("/", (req, res) => {
-  res.send("Backend is running successfully");
+  res.send("Backend is running");
 });
 
 app.get("/api/dashboard-data", async (req, res) => {
   try {
     const result = {};
 
-   for (const file of FILES) {
-  const buffer = await downloadExcel(file.fileId);
-  const data = readExcelFromBuffer(buffer, file.type);
+    for (const file of FILES) {
+      const buffer = await downloadExcel(file.fileId);
+      const data = readExcelFromBuffer(buffer, file.type);
 
-  // CFT + BI AXIAL → direct mapping
-  if (!file.name.startsWith("RFT")) {
-    result[file.name] = {
-      machine: file.name,
-      ...data,
-    };
-    continue;
-  }
-
-  // RFT GROUPS (EXACT DASHBOARD NAMES)
-  if (file.name === "RFT-1&2") {
-    result["RFT-1&2"] = {
-      machine: "RFT-1&2",
-      ...data,
-    };
-  }
-
-  if (file.name === "RFT-3&4") {
-    result["RFT-3&4"] = {
-      machine: "RFT-3&4",
-      ...data,
-    };
-  }
-
-  if (file.name === "RFT-5&6") {
-    result["RFT-5&6"] = {
-      machine: "RFT-5&6",
-      ...data,
-    };
-  }
-}
-
+      result[file.name] = {
+        machine: file.name,
+        ...data,
+      };
+    }
 
     res.json(result);
   } catch (err) {
@@ -142,7 +117,6 @@ app.get("/api/dashboard-data", async (req, res) => {
   }
 });
 
-// ================= START =================
 app.listen(PORT, () => {
-  console.log(`Backend running on port ${PORT}`);
+  console.log(`Server running on ${PORT}`);
 });

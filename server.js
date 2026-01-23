@@ -1,139 +1,188 @@
-// 🔹 LOAD ENVIRONMENT VARIABLES
-require("dotenv").config();
+import { useState, useEffect } from "react";
 
-const express = require("express");
-const XLSX = require("xlsx");
-const cors = require("cors");
-const { google } = require("googleapis");
+function App() {
+  /* ================= LOGIN ================= */
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [error, setError] = useState("");
 
-const app = express();
-app.use(cors());
+  /* ================= MACHINE STATE ================= */
+  const [machineInputs, setMachineInputs] = useState({
+    "CFT-1": { wheelCode: "", wheelSize: "", cycles: "", load: "", testReason: "" },
+    "CFT-2": { wheelCode: "", wheelSize: "", cycles: "", load: "", testReason: "" },
+    "CFT-3": { wheelCode: "", wheelSize: "", cycles: "", load: "", testReason: "" },
+    "RFT-1&2": { wheelCode: "", wheelSize: "", cycles: "", load: "", testReason: "" },
+    "RFT-3&4": { wheelCode: "", wheelSize: "", cycles: "", load: "", testReason: "" },
+    "RFT-5&6": { wheelCode: "", wheelSize: "", cycles: "", load: "", testReason: "" },
+    "BI AXIAL-CV": { wheelCode: "", wheelSize: "", cycles: "", load: "", testReason: "" },
+    "BI AXIAL-LP": { wheelCode: "", wheelSize: "", cycles: "", load: "", testReason: "" },
+  });
 
-const PORT = process.env.PORT || 5000;
+  /* ================= FETCH BACKEND ================= */
+  useEffect(() => {
+    if (!isLoggedIn) return;
 
-/* ================================
-   GOOGLE AUTH (FIXED FOR RENDER)
-================================ */
+    fetch("https://excel-dashboard-backend-q2nl.onrender.com/api/dashboard-data")
+      .then((res) => res.json())
+      .then((data) => {
+        const updated = { ...machineInputs };
 
-// ✅ Parse credentials JSON from env
-if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-  throw new Error("❌ GOOGLE_APPLICATION_CREDENTIALS_JSON is missing");
-}
+        /* ---------- CFT ---------- */
+        ["CFT-1", "CFT-2", "CFT-3"].forEach((k) => {
+          if (!data[k]) return;
+          updated[k] = {
+            ...updated[k],
+            wheelCode: data[k].wheelCode || "",
+            wheelSize: data[k].wheelSize || "",
+            testReason: data[k].testReason || "",
+            load: data[k].bendingMovement || "",
+          };
+        });
 
-const credentials = JSON.parse(
-  process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON
-);
+        /* ---------- BI AXIAL ---------- */
+        ["BI AXIAL-CV", "BI AXIAL-LP"].forEach((k) => {
+          if (!data[k]) return;
+          updated[k] = {
+            ...updated[k],
+            wheelCode: data[k].wheelCode || "",
+            wheelSize: data[k].wheelSize || "",
+            testReason: data[k].testReason || "",
+            load: data[k].testLoad || "",
+          };
+        });
 
-// ✅ Correct auth setup
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: ["https://www.googleapis.com/auth/drive.readonly"],
-});
+        /* ---------- RFT GROUPING (FIXED) ---------- */
+        const rft1 = data["RFT-1"];
+        const rft2 = data["RFT-2"];
+        const rft3 = data["RFT-3"];
 
-const drive = google.drive({ version: "v3", auth });
+        if (rft1 && rft2) {
+          updated["RFT-1&2"] = {
+            ...updated["RFT-1&2"],
+            wheelCode: `${rft1.wheelCode}, ${rft2.wheelCode}`,
+            wheelSize: rft1.wheelSize,
+            testReason: rft1.testReason,
+            load: rft1.testLoad,
+          };
+        }
 
-/* ================================
-   GOOGLE DRIVE FILE MAP
-================================ */
+        if (rft3) {
+          updated["RFT-3&4"] = {
+            ...updated["RFT-3&4"],
+            wheelCode: rft3.wheelCode,
+            wheelSize: rft3.wheelSize,
+            testReason: rft3.testReason,
+            load: rft3.testLoad,
+          };
 
-const FILES = [
-  { name: "CFT-1", fileId: "1ZzOgrZgjAKXkM4c2KF4Gg34V16_71rB2", type: "CFT" },
-  { name: "CFT-2", fileId: "1aPQLnQvDdBMMlhifoWXNu-MBRRWCBRir", type: "CFT" },
-  { name: "CFT-3", fileId: "1U4zB-81xLgyp_R--Utxsr3PDk-aUCIlV", type: "CFT" },
-  { name: "RFT-1", fileId: "1ut8udLSw4XmewBw7dVjWFsM-HL77kLXO", type: "RFT" },
-  { name: "RFT-2", fileId: "1s8jUgqu7ypDi3dE3n5qQsUMco9uC331d", type: "RFT" },
-  { name: "RFT-3", fileId: "1LurYup84SSTQnq5L754ahMLM0Xr03Mf_", type: "RFT" },
-  { name: "BI AXIAL-LP", fileId: "1PIK9kYSOd0WtMusfmqqVHEm_iWuOgqwE", type: "OTHER" },
-  { name: "BI AXIAL-CV", fileId: "17I8YfQMlgMP_RKuRIkZVQw9lse3psGWK", type: "OTHER" }
-];
+          /* 🔥 THIS WAS MISSING */
+          updated["RFT-5&6"] = {
+            ...updated["RFT-5&6"],
+            wheelCode: rft3.wheelCode,
+            wheelSize: rft3.wheelSize,
+            testReason: rft3.testReason,
+            load: rft3.testLoad,
+          };
+        }
 
-/* ================================
-   HELPERS
-================================ */
+        setMachineInputs(updated);
+      })
+      .catch((err) => console.error("Backend error:", err));
+  }, [isLoggedIn]);
 
-function cleanValue(value) {
-  if (!value) return "";
-  return String(value)
-    .replace(/WHEEL CODE\s*:/i, "")
-    .replace(/WHEEL SIZE\s*:/i, "")
-    .replace(/TEST REASON\s*:/i, "")
-    .replace(/BENDING MOMENT\s*:/i, "")
-    .replace(/BENDING MOVEMENT\s*:/i, "")
-    .replace(/TEST LOAD\s*:/i, "")
-    .trim();
-}
+  /* ================= MACHINE CONFIG ================= */
+  const machines = [
+    { name: "CFT-1", type: "CFT", sub: "10 KN", img: "/images/cft1_2.png" },
+    { name: "CFT-2", type: "CFT", sub: "60 KN", img: "/images/cft1_2.png" },
+    { name: "CFT-3", type: "CFT", sub: "105 KN", img: "/images/cft3.png" },
+    { name: "RFT-1&2", type: "RFT", sub: "3 TON", img: "/images/rft1_2.png" },
+    { name: "RFT-3&4", type: "RFT", sub: "10 TON", img: "/images/rft3_4.png" },
+    { name: "RFT-5&6", type: "RFT", sub: "10 & 15 TON", img: "/images/rft5_6.png" },
+    {
+      name: "BI AXIAL-CV",
+      type: "BIAXIAL",
+      subLines: ["VERTICAL 250 KN", "LATERAL ±100 KN"],
+      img: "/images/biaxial_cv.png",
+    },
+    {
+      name: "BI AXIAL-LP",
+      type: "BIAXIAL",
+      subLines: ["VERTICAL 40 KN", "LATERAL ±40 KN"],
+      img: "/images/biaxial_lp.png",
+    },
+  ];
 
-// 🔹 Download Excel file from Drive
-async function downloadExcel(fileId) {
-  const res = await drive.files.get(
-    { fileId, alt: "media" },
-    { responseType: "arraybuffer" }
+  /* ================= LOGIN ================= */
+  const login = (e) => {
+    e.preventDefault();
+    if (username === "wil" && password === "123456") {
+      setIsLoggedIn(true);
+      setError("");
+    } else setError("Invalid credentials");
+  };
+
+  const logout = () => {
+    setIsLoggedIn(false);
+    setUsername("");
+    setPassword("");
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div style={styles.loginPage}>
+        <form style={styles.loginCard} onSubmit={login}>
+          <h2>Login</h2>
+          {error && <p style={{ color: "red" }}>{error}</p>}
+          <input style={styles.loginInput} placeholder="Username"
+            value={username} onChange={(e) => setUsername(e.target.value)} />
+          <input style={styles.loginInput} type="password" placeholder="Password"
+            value={password} onChange={(e) => setPassword(e.target.value)} />
+          <button style={styles.loginButton}>Login</button>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div style={styles.dashboard}>
+      <div style={styles.header}>
+        <h2>WHEELS INDIA LIMITED</h2>
+        <button style={styles.logoutBtn} onClick={logout}>Logout</button>
+      </div>
+
+      <div style={styles.grid}>
+        {machines.map((m) => {
+          const loadLabel = m.type === "CFT" ? "Bending Movement" : "Test Load";
+          return (
+            <div key={m.name} style={styles.card}>
+              <div style={styles.machineName}>{m.name}</div>
+              <img src={m.img} alt={m.name} style={styles.image} />
+              {["wheelCode","wheelSize","cycles","load","testReason"].map((k) => (
+                <input key={k} style={styles.input} value={machineInputs[m.name][k]} readOnly />
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
-
-  return Buffer.from(res.data);
 }
 
-// 🔹 Read Excel buffer
-function readExcelFromBuffer(buffer, type) {
-  const workbook = XLSX.read(buffer, { type: "buffer" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+/* ================= STYLES ================= */
+const styles = {
+  dashboard: { padding: 20 },
+  header: { display: "flex", justifyContent: "space-between" },
+  grid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20 },
+  card: { background: "#fff", padding: 12, borderRadius: 12 },
+  image: { width: 120 },
+  input: { width: "100%", marginBottom: 6 },
+  machineName: { fontWeight: "bold" },
+  loginPage: { minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center" },
+  loginCard: { background: "#fff", padding: 20, borderRadius: 8 },
+  loginInput: { width: "100%", marginBottom: 10 },
+  loginButton: { width: "100%" },
+  logoutBtn: { background: "red", color: "white" }
+};
 
-  const baseData = {
-    wheelCode: cleanValue(sheet["B7"]?.v),
-    wheelSize: cleanValue(sheet["B8"]?.v),
-    testReason: cleanValue(sheet["B37"]?.v),
-  };
-
-  if (type === "CFT") {
-    return {
-      ...baseData,
-      bendingMovement: cleanValue(sheet["B30"]?.v),
-      testLoad: null,
-    };
-  }
-
-  return {
-    ...baseData,
-    bendingMovement: null,
-    testLoad: cleanValue(sheet["B20"]?.v),
-  };
-}
-
-/* ================================
-   ROUTES
-================================ */
-
-app.get("/", (req, res) => {
-  res.send("✅ Backend is running successfully");
-});
-
-app.get("/api/dashboard-data", async (req, res) => {
-  try {
-    const result = {};
-
-    for (const file of FILES) {
-      const buffer = await downloadExcel(file.fileId);
-      const data = readExcelFromBuffer(buffer, file.type);
-
-      result[file.name] = {
-        machine: file.name,
-        ...data,
-      };
-    }
-
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({
-      error: "Failed to read Excel files from Drive",
-    });
-  }
-});
-
-/* ================================
-   START SERVER
-================================ */
-
-app.listen(PORT, () => {
-  console.log(`🚀 Backend running on port ${PORT}`);
-});
+export default App;

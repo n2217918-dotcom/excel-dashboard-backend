@@ -28,18 +28,39 @@ const auth = new google.auth.GoogleAuth({
 const drive = google.drive({ version: "v3", auth });
 
 /* ================= FILE MAP ================= */
+/* SAME EXCEL → MULTIPLE RFT MACHINES */
 
 const FILES = [
-  { name: "CFT-1", fileId: "1ZzOgrZgjAKXkM4c2KF4Gg34V16_71rB2", type: "CFT" },
-  { name: "CFT-2", fileId: "1aPQLnQvDdBMMlhifoWXNu-MBRRWCBRir", type: "CFT" },
-  { name: "CFT-3", fileId: "1U4zB-81xLgyp_R--Utxsr3PDk-aUCIlV", type: "CFT" },
+  { names: ["CFT-1"], fileId: "1ZzOgrZgjAKXkM4c2KF4Gg34V16_71rB2", type: "CFT" },
+  { names: ["CFT-2"], fileId: "1aPQLnQvDdBMMlhifoWXNu-MBRRWCBRir", type: "CFT" },
+  { names: ["CFT-3"], fileId: "1U4zB-81xLgyp_R--Utxsr3PDk-aUCIlV", type: "CFT" },
 
-  { name: "RFT-1&2", fileId: "1ut8udLSw4XmewBw7dVjWFsM-HL77kLXO", type: "RFT" },
-  { name: "RFT-3&4", fileId: "1s8jUgqu7ypDi3dE3n5qQsUMco9uC331d", type: "RFT" },
-  { name: "RFT-5&6", fileId: "1LurYup84SSTQnq5L754ahMLM0Xr03Mf_", type: "RFT" },
+  {
+    names: ["RFT-1", "RFT-2"],
+    fileId: "1ut8udLSw4XmewBw7dVjWFsM-HL77kLXO",
+    type: "RFT",
+  },
+  {
+    names: ["RFT-3", "RFT-4"],
+    fileId: "1s8jUgqu7ypDi3dE3n5qQsUMco9uC331d",
+    type: "RFT",
+  },
+  {
+    names: ["RFT-5", "RFT-6"],
+    fileId: "1LurYup84SSTQnq5L754ahMLM0Xr03Mf_",
+    type: "RFT",
+  },
 
-  { name: "BI AXIAL-LP", fileId: "1PIK9kYSOd0WtMusfmqqVHEm_iWuOgqwE", type: "OTHER" },
-  { name: "BI AXIAL-CV", fileId: "17I8YfQMlgMP_RKuRIkZVQw9lse3psGWK", type: "OTHER" },
+  {
+    names: ["BI AXIAL-LP"],
+    fileId: "1PIK9kYSOd0WtMusfmqqVHEm_iWuOgqwE",
+    type: "OTHER",
+  },
+  {
+    names: ["BI AXIAL-CV"],
+    fileId: "17I8YfQMlgMP_RKuRIkZVQw9lse3psGWK",
+    type: "OTHER",
+  },
 ];
 
 /* ================= HELPERS ================= */
@@ -64,7 +85,8 @@ async function downloadExcel(fileId) {
   return Buffer.from(res.data);
 }
 
-/* 🔴 THIS FUNCTION WAS MISSING */
+/* ================= EXCEL PARSER (UNCHANGED) ================= */
+
 function readExcelFromBuffer(buffer, type) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -104,10 +126,12 @@ app.get("/api/dashboard-data", async (req, res) => {
       const buffer = await downloadExcel(file.fileId);
       const data = readExcelFromBuffer(buffer, file.type);
 
-      result[file.name] = {
-        machine: file.name,
-        ...data,
-      };
+      for (const machineName of file.names) {
+        result[machineName] = {
+          machine: machineName,
+          ...data,
+        };
+      }
     }
 
     res.json(result);
@@ -117,6 +141,8 @@ app.get("/api/dashboard-data", async (req, res) => {
   }
 });
 
+/* ================= START SERVER ================= */
+
 app.listen(PORT, () => {
-  console.log(`Server running on ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

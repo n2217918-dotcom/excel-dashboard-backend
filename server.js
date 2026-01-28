@@ -28,7 +28,6 @@ const auth = new google.auth.GoogleAuth({
 const drive = google.drive({ version: "v3", auth });
 
 /* ================= FILE MAP ================= */
-/* 1 EXCEL FILE → 1 MACHINE (FINAL & CORRECT) */
 
 const FILES = [
   { name: "CFT-1", fileId: "1ZzOgrZgjAKXkM4c2KF4Gg34V16_71rB2", type: "CFT" },
@@ -39,6 +38,8 @@ const FILES = [
   { name: "RFT-2", fileId: "1s8jUgqu7ypDi3dE3n5qQsUMco9uC331d", type: "RFT" },
   { name: "RFT-3", fileId: "1LurYup84SSTQnq5L754ahMLM0Xr03Mf_", type: "RFT" },
   { name: "RFT-4", fileId: "1EQHiQb5L4zTxRLsUssiKBWsm8lGUZu7d", type: "RFT" },
+
+  // 🔴 ONLY THESE TWO HAVE SPECIAL BEHAVIOR
   { name: "RFT-5", fileId: "1tGRKVvD5c-ZcKhR2QwDetumzXRDmEOts", type: "RFT" },
   { name: "RFT-6", fileId: "1y6dbDqzlIUuJIQ8oWudfoPXpjm3PMkNX", type: "RFT" },
 
@@ -95,32 +96,54 @@ function readExcelFromBuffer(buffer, type) {
   };
 }
 
+/* ================= NEW: CACHE ================= */
+
+let cachedDashboardData = {};
+
+/* ================= DATA UPDATE FUNCTION ================= */
+
+async function updateDashboardData() {
+  const result = {};
+
+  for (const file of FILES) {
+    const buffer = await downloadExcel(file.fileId);
+    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+    let data = readExcelFromBuffer(buffer, file.type);
+
+    // 🔴 ONLY FOR RFT-5 & RFT-6 → override wheelCode from H8
+    if (file.name === "RFT-5" || file.name === "RFT-6") {
+      data.wheelCode = clean(sheet["H8"]?.v);
+    }
+
+    result[file.name] = {
+      machine: file.name,
+      ...data,
+    };
+  }
+
+  cachedDashboardData = result;
+  console.log("Dashboard updated at", new Date().toLocaleTimeString());
+}
+
 /* ================= ROUTES ================= */
 
 app.get("/", (req, res) => {
   res.send("Backend is running");
 });
 
-app.get("/api/dashboard-data", async (req, res) => {
-  try {
-    const result = {};
-
-    for (const file of FILES) {
-      const buffer = await downloadExcel(file.fileId);
-      const data = readExcelFromBuffer(buffer, file.type);
-
-      result[file.name] = {
-        machine: file.name,
-        ...data,
-      };
-    }
-
-    res.json(result);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to read Excel files" });
-  }
+app.get("/api/dashboard-data", (req, res) => {
+  res.json(cachedDashboardData);
 });
+
+/* ================= SCHEDULER ================= */
+
+// Run once at startup
+updateDashboardData();
+
+// Run every 10 minutes
+setInterval(updateDashboardData, 10 * 60 * 1000);
 
 /* ================= START SERVER ================= */
 

@@ -101,7 +101,10 @@ let cachedDashboardData = {};
 let lastCyclesValue = {
   "RFT-5": "",
   "RFT-6": "",
+  "CFT-1": "",
+  "BI AXIAL-LP": "",
 };
+;
 
 /* ================= UPDATE FUNCTION ================= */
 
@@ -115,16 +118,23 @@ async function updateDashboardData() {
 
     let data = readExcelFromBuffer(buffer, file.type);
 
-    // 🔴 ONLY FOR RFT-5 & RFT-6 → cycles from H8
-    if (file.name === "RFT-5" || file.name === "RFT-6") {
-      const newCycles = clean(sheet["H8"]?.v);
+    
+    // 🔴 CYCLES FROM H8 (CFT-1, RFT-5, RFT-6, BI AXIAL-LP)
+if (
+  file.name === "CFT-1" ||
+  file.name === "RFT-5" ||
+  file.name === "RFT-6" ||
+  file.name === "BI AXIAL-LP"
+) {
+  const newCycles = clean(sheet["H8"]?.v);
 
-      if (newCycles && newCycles !== lastCyclesValue[file.name]) {
-        lastCyclesValue[file.name] = newCycles;
-      }
+  if (newCycles && newCycles !== lastCyclesValue[file.name]) {
+    lastCyclesValue[file.name] = newCycles;
+  }
 
-      data.cycles = lastCyclesValue[file.name];
-    }
+  data.cycles = lastCyclesValue[file.name];
+}
+
 
     result[file.name] = {
       machine: file.name,

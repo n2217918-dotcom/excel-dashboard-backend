@@ -10,7 +10,7 @@ app.use(cors());
 
 const PORT = process.env.PORT || 5000;
 
-/* ================= GOOGLE AUTH ================= */
+/* ================= GOOGLE AUTH (UNCHANGED) ================= */
 
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
   throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON missing");
@@ -27,7 +27,7 @@ const auth = new google.auth.GoogleAuth({
 
 const drive = google.drive({ version: "v3", auth });
 
-/* ================= FILE MAP (UNCHANGED) ================= */
+/* ================= FILE MAP ================= */
 
 const FILES = [
   { name: "CFT-1", fileId: "1ZzOgrZgjAKXkM4c2KF4Gg34V16_71rB2", type: "CFT" },
@@ -46,7 +46,7 @@ const FILES = [
   { name: "BI AXIAL-CV", fileId: "17I8YfQMlgMP_RKuRIkZVQw9lse3psGWK", type: "OTHER" },
 ];
 
-/* ================= HELPERS (UNCHANGED) ================= */
+/* ================= HELPERS ================= */
 
 function clean(value) {
   if (!value) return "";
@@ -68,7 +68,7 @@ async function downloadExcel(fileId) {
   return Buffer.from(res.data);
 }
 
-/* ================= EXCEL PARSER (UNCHANGED) ================= */
+/* ================= EXCEL PARSER ================= */
 
 function readExcelFromBuffer(buffer, type) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
@@ -102,9 +102,9 @@ let lastCyclesValue = {
   "RFT-5": "",
   "RFT-6": "",
   "CFT-1": "",
+  "CFT-2": "",
   "BI AXIAL-LP": "",
 };
-;
 
 /* ================= UPDATE FUNCTION ================= */
 
@@ -118,23 +118,21 @@ async function updateDashboardData() {
 
     let data = readExcelFromBuffer(buffer, file.type);
 
-    
-    // 🔴 CYCLES FROM H8 (CFT-1, RFT-5, RFT-6, BI AXIAL-LP)
-if (
-  file.name === "CFT-1" ||
-  file.name === "RFT-5" ||
-  file.name === "RFT-6" ||
-  file.name === "BI AXIAL-LP"
-) {
-  const newCycles = clean(sheet["H8"]?.v);
+    if (
+      file.name === "CFT-1" ||
+      file.name === "CFT-2" ||
+      file.name === "RFT-5" ||
+      file.name === "RFT-6" ||
+      file.name === "BI AXIAL-LP"
+    ) {
+      const newCycles = clean(sheet["H8"]?.v);
 
-  if (newCycles && newCycles !== lastCyclesValue[file.name]) {
-    lastCyclesValue[file.name] = newCycles;
-  }
+      if (newCycles && newCycles !== lastCyclesValue[file.name]) {
+        lastCyclesValue[file.name] = newCycles;
+      }
 
-  data.cycles = lastCyclesValue[file.name];
-}
-
+      data.cycles = lastCyclesValue[file.name];
+    }
 
     result[file.name] = {
       machine: file.name,
@@ -158,10 +156,7 @@ app.get("/api/dashboard-data", (req, res) => {
 
 /* ================= SCHEDULER ================= */
 
-// Initial load
 updateDashboardData();
-
-// Every 10 minutes
 setInterval(updateDashboardData, 10 * 60 * 1000);
 
 /* ================= START SERVER ================= */

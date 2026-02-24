@@ -70,28 +70,42 @@ async function downloadExcel(fileId) {
 
 /* ================= EXCEL PARSER ================= */
 
-function readExcelFromBuffer(buffer, type) {
+function readExcelFromBuffer(buffer, type, machineName) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
   const base = {
-    wheelCode: clean(sheet["B7"]?.v),
-    wheelSize: clean(sheet["B8"]?.v),
-    testReason: clean(sheet["B37"]?.v),
+    wheelCode: clean(sheet["H5"]?.v),
+    wheelSize: clean(sheet["H6"]?.v),
+    testReason: clean(sheet["B34"]?.v),
   };
 
+  // CFT → Bending Movement from H27
   if (type === "CFT") {
     return {
       ...base,
-      bendingMovement: clean(sheet["B30"]?.v),
+      bendingMovement: clean(sheet["H27"]?.v),
       testLoad: null,
     };
   }
 
+  // BI AXIAL LP or CV → from F15
+  if (
+    machineName === "BI AXIAL-LP" ||
+    machineName === "BI AXIAL-CV"
+  ) {
+    return {
+      ...base,
+      bendingMovement: null,
+      testLoad: clean(sheet["F15"]?.v),
+    };
+  }
+
+  // RFT → Test Load from H18
   return {
     ...base,
     bendingMovement: null,
-    testLoad: clean(sheet["B20"]?.v),
+    testLoad: clean(sheet["H18"]?.v),
   };
 }
 

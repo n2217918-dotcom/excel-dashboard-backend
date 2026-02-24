@@ -99,10 +99,16 @@ function readExcelFromBuffer(buffer, type) {
 
 let cachedDashboardData = {};
 let lastCyclesValue = {
-  "RFT-5": "",
-  "RFT-6": "",
   "CFT-1": "",
   "CFT-2": "",
+
+  "RFT-1": "",
+  "RFT-2": "",
+  "RFT-3": "",
+  "RFT-4": "",
+  "RFT-5": "",
+  "RFT-6": "",
+
   "BI AXIAL-LP": "",
 };
 
@@ -119,12 +125,18 @@ async function updateDashboardData() {
     let data = readExcelFromBuffer(buffer, file.type);
 
     if (
-      file.name === "CFT-1" ||
-      file.name === "CFT-2" ||
-      file.name === "RFT-5" ||
-      file.name === "RFT-6" ||
-      file.name === "BI AXIAL-LP"
-    ) {
+  file.name === "CFT-1" ||
+  file.name === "CFT-2" ||
+
+  file.name === "RFT-1" ||
+  file.name === "RFT-2" ||
+  file.name === "RFT-3" ||
+  file.name === "RFT-4" ||
+  file.name === "RFT-5" ||
+  file.name === "RFT-6" ||
+
+  file.name === "BI AXIAL-LP"
+) {
       const newCycles = clean(sheet["H8"]?.v);
 
       if (newCycles && newCycles !== lastCyclesValue[file.name]) {
@@ -138,7 +150,7 @@ async function updateDashboardData() {
       machine: file.name,
       ...data,
     };
-  }
+  } 
 
   cachedDashboardData = result;
   console.log("Dashboard updated at", new Date().toLocaleTimeString());

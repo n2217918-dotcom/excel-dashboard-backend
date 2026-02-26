@@ -136,7 +136,7 @@ async function updateDashboardData() {
     const workbook = XLSX.read(buffer, { type: "buffer" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
-    let data = readExcelFromBuffer(buffer, file.type);
+    let data = readExcelFromBuffer(buffer, file.type, file.name);
 
     if (
   file.name === "CFT-1" ||

@@ -151,7 +151,7 @@ async function updateDashboardData() {
 
   file.name === "BI AXIAL-LP"
 ) {
-      const newCycles = clean(sheet["H8"]?.v);
+      const newCycles = clean(sheet["AI14"]?.v);
 
       if (newCycles && newCycles !== lastCyclesValue[file.name]) {
         lastCyclesValue[file.name] = newCycles;

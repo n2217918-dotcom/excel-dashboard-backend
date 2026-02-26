@@ -77,7 +77,7 @@ function readExcelFromBuffer(buffer, type, machineName) {
   const base = {
     wheelCode: clean(sheet["H5"]?.v),
     wheelSize: clean(sheet["H6"]?.v),
-    testReason: clean(sheet["B34"]?.v),
+    testReason: clean(sheet["B38"]?.v),
   };
 
   // CFT → Bending Movement from H31
@@ -97,7 +97,7 @@ function readExcelFromBuffer(buffer, type, machineName) {
     return {
       ...base,
       bendingMovement: null,
-      testLoad: clean(sheet["F19"]?.v),
+      WheelLoad: clean(sheet["F19"]?.v),
     };
   }
 

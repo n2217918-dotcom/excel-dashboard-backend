@@ -80,16 +80,16 @@ function readExcelFromBuffer(buffer, type, machineName) {
     testReason: clean(sheet["B34"]?.v),
   };
 
-  // CFT → Bending Movement from H27
+  // CFT → Bending Movement from H31
   if (type === "CFT") {
     return {
       ...base,
-      bendingMovement: clean(sheet["H27"]?.v),
+      bendingMovement: clean(sheet["H31"]?.v),
       testLoad: null,
     };
   }
 
-  // BI AXIAL LP or CV → from F15
+  // BI AXIAL LP or CV → from F19
   if (
     machineName === "BI AXIAL-LP" ||
     machineName === "BI AXIAL-CV"
@@ -97,15 +97,15 @@ function readExcelFromBuffer(buffer, type, machineName) {
     return {
       ...base,
       bendingMovement: null,
-      testLoad: clean(sheet["F15"]?.v),
+      testLoad: clean(sheet["F19"]?.v),
     };
   }
 
-  // RFT → Test Load from H18
+  // RFT → Test Load from H22
   return {
     ...base,
     bendingMovement: null,
-    testLoad: clean(sheet["H18"]?.v),
+    testLoad: clean(sheet["H22"]?.v),
   };
 }
 

@@ -97,7 +97,7 @@ function readExcelFromBuffer(buffer, type, machineName) {
     return {
       ...base,
       bendingMovement: null,
-      WheelLoad: clean(sheet["F19"]?.v),
+      testLoad: clean(sheet["F19"]?.v),
     };
   }
 

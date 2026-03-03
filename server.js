@@ -115,6 +115,7 @@ let cachedDashboardData = {};
 let lastCyclesValue = {
   "CFT-1": "",
   "CFT-2": "",
+  "CFT-3": "",
 
   "RFT-1": "",
   "RFT-2": "",
@@ -141,6 +142,7 @@ async function updateDashboardData() {
     if (
   file.name === "CFT-1" ||
   file.name === "CFT-2" ||
+  file.name === "CFT-3" ||
 
   file.name === "RFT-1" ||
   file.name === "RFT-2" ||
@@ -153,9 +155,9 @@ async function updateDashboardData() {
 ) {
       const newCycles = clean(sheet["AI14"]?.v);
 
-      if (newCycles && newCycles !== lastCyclesValue[file.name]) {
-        lastCyclesValue[file.name] = newCycles;
-      }
+      if (String(newCycles).trim() !== "") {
+    lastCyclesValue[file.name] = String(newCycles).trim();
+}
 
       data.cycles = lastCyclesValue[file.name];
     }

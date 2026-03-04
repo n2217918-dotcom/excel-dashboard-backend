@@ -80,34 +80,39 @@ function readExcelFromBuffer(buffer, type, machineName) {
     testReason: clean(sheet["B38"]?.v),
   };
 
-  // CFT → Bending Movement from H31
-  if (type === "CFT") {
-    return {
-      ...base,
-      bendingMovement: clean(sheet["H31"]?.v),
-      testLoad: null,
-    };
-  }
+  function addUnit(value, unit) {
+  if (value === null || value === undefined || value === "") return null;
+  return `${value} ${unit}`;
+}
 
-  // BI AXIAL LP or CV → from F19
-  if (
-    machineName === "BI AXIAL-LP" ||
-    machineName === "BI AXIAL-CV"
-  ) {
-    return {
-      ...base,
-      bendingMovement: null,
-      testLoad: clean(sheet["F19"]?.v),
-    };
-  }
+if (type === "CFT") {
+  return {
+    ...base,
+    bendingMovement: addUnit(clean(sheet["H31"]?.v), "kN"),
+    testLoad: null,
+  };
+}
 
-  // RFT → Test Load from H22
+// BI AXIAL LP or CV → from F19
+if (
+  machineName === "BI AXIAL-LP" ||
+  machineName === "BI AXIAL-CV"
+) {
   return {
     ...base,
     bendingMovement: null,
-    testLoad: clean(sheet["H22"]?.v),
+    testLoad: addUnit(clean(sheet["F19"]?.v), "kg"),
   };
 }
+
+// RFT → Test Load from H22
+return {
+  ...base,
+  bendingMovement: null,
+  testLoad: addUnit(clean(sheet["H22"]?.v), "kg"),
+};
+}
+
 
 /* ================= CACHE ================= */
 

@@ -10,7 +10,7 @@ app.use(cors());
 
 const PORT = process.env.PORT || 5000;
 
-/* ================= GOOGLE AUTH (UNCHANGED) ================= */
+/* ================= GOOGLE AUTH ================= */
 
 if (!process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
   throw new Error("GOOGLE_APPLICATION_CREDENTIALS_JSON missing");
@@ -81,38 +81,44 @@ function readExcelFromBuffer(buffer, type, machineName) {
   };
 
   function addUnit(value, unit) {
-  if (value === null || value === undefined || value === "") return null;
-  return `${value} ${unit}`;
-}
+    if (value === null || value === undefined || value === "") return null;
+    return `${value} ${unit}`;
+  }
 
-if (type === "CFT") {
-  return {
-    ...base,
-    bendingMovement: addUnit(clean(sheet["H31"]?.v), "kN"),
-    testLoad: null,
-  };
-}
+  /* ================= CFT ================= */
 
-// BI AXIAL LP or CV → from F19
-if (
-  machineName === "BI AXIAL-LP" ||
-  machineName === "BI AXIAL-CV"
-) {
+  if (type === "CFT") {
+    return {
+      ...base,
+      bendingMovement: addUnit(clean(sheet["H31"]?.v), "kN"),
+      acceptedCycles: clean(sheet["H33"]?.v),
+      testLoad: null,
+    };
+  }
+
+  /* ================= BI AXIAL ================= */
+
+  if (
+    machineName === "BI AXIAL-LP" ||
+    machineName === "BI AXIAL-CV"
+  ) {
+    return {
+      ...base,
+      bendingMovement: null,
+      testLoad: addUnit(clean(sheet["F19"]?.v), "kg"),
+      acceptedCycles: clean(sheet["W27"]?.v),
+    };
+  }
+
+  /* ================= RFT ================= */
+
   return {
     ...base,
     bendingMovement: null,
-    testLoad: addUnit(clean(sheet["F19"]?.v), "kg"),
+    testLoad: addUnit(clean(sheet["H22"]?.v), "kg"),
+    acceptedCycles: clean(sheet["H27"]?.v),
   };
 }
-
-// RFT → Test Load from H22
-return {
-  ...base,
-  bendingMovement: null,
-  testLoad: addUnit(clean(sheet["H22"]?.v), "kg"),
-};
-}
-
 
 /* ================= CACHE ================= */
 
@@ -145,24 +151,24 @@ async function updateDashboardData() {
     let data = readExcelFromBuffer(buffer, file.type, file.name);
 
     if (
-  file.name === "CFT-1" ||
-  file.name === "CFT-2" ||
-  file.name === "CFT-3" ||
+      file.name === "CFT-1" ||
+      file.name === "CFT-2" ||
+      file.name === "CFT-3" ||
 
-  file.name === "RFT-1" ||
-  file.name === "RFT-2" ||
-  file.name === "RFT-3" ||
-  file.name === "RFT-4" ||
-  file.name === "RFT-5" ||
-  file.name === "RFT-6" ||
+      file.name === "RFT-1" ||
+      file.name === "RFT-2" ||
+      file.name === "RFT-3" ||
+      file.name === "RFT-4" ||
+      file.name === "RFT-5" ||
+      file.name === "RFT-6" ||
 
-  file.name === "BI AXIAL-LP"
-) {
+      file.name === "BI AXIAL-LP"
+    ) {
       const newCycles = clean(sheet["AI14"]?.v);
 
       if (String(newCycles).trim() !== "") {
-    lastCyclesValue[file.name] = String(newCycles).trim();
-}
+        lastCyclesValue[file.name] = String(newCycles).trim();
+      }
 
       data.cycles = lastCyclesValue[file.name];
     }
@@ -171,7 +177,7 @@ async function updateDashboardData() {
       machine: file.name,
       ...data,
     };
-  } 
+  }
 
   cachedDashboardData = result;
   console.log("Dashboard updated at", new Date().toLocaleTimeString());

@@ -136,6 +136,7 @@ let lastCyclesValue = {
   "RFT-6": "",
 
   "BI AXIAL-LP": "",
+  "BI AXIAL-CV": "",
 };
 
 /* ================= UPDATE FUNCTION ================= */
@@ -151,19 +152,20 @@ async function updateDashboardData() {
     let data = readExcelFromBuffer(buffer, file.type, file.name);
 
     if (
-      file.name === "CFT-1" ||
-      file.name === "CFT-2" ||
-      file.name === "CFT-3" ||
+  file.name === "CFT-1" ||
+  file.name === "CFT-2" ||
+  file.name === "CFT-3" ||
 
-      file.name === "RFT-1" ||
-      file.name === "RFT-2" ||
-      file.name === "RFT-3" ||
-      file.name === "RFT-4" ||
-      file.name === "RFT-5" ||
-      file.name === "RFT-6" ||
+  file.name === "RFT-1" ||
+  file.name === "RFT-2" ||
+  file.name === "RFT-3" ||
+  file.name === "RFT-4" ||
+  file.name === "RFT-5" ||
+  file.name === "RFT-6" ||
 
-      file.name === "BI AXIAL-LP"
-    ) {
+  file.name === "BI AXIAL-LP" ||
+  file.name === "BI AXIAL-CV"
+) {
       const newCycles = clean(sheet["AI14"]?.v);
 
       if (String(newCycles).trim() !== "") {

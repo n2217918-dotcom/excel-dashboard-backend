@@ -74,10 +74,18 @@ function readExcelFromBuffer(buffer, type, machineName) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
+  // Test Reason comes from two merged cells (K16 and K17) combined.
+  // Empty pieces are filtered so a blank K17 doesn't leave a trailing space.
+  const testReasonPart1 = clean(sheet["K16"]?.v);
+  const testReasonPart2 = clean(sheet["K17"]?.v);
+  const combinedTestReason = [testReasonPart1, testReasonPart2]
+    .filter((part) => part !== "")
+    .join(" ");
+
   const base = {
     wheelCode: clean(sheet["H5"]?.v),
     wheelSize: clean(sheet["H6"]?.v),
-    testReason: clean(sheet["B38"]?.v),
+    testReason: combinedTestReason,
   };
 
   function addUnit(value, unit) {
@@ -105,7 +113,10 @@ function readExcelFromBuffer(buffer, type, machineName) {
     return {
       ...base,
       bendingMovement: null,
-      testLoad: addUnit(clean(sheet["F19"]?.v), "kg"),
+      // Test Load cell not decided yet for BI AXIAL — left blank on
+      // purpose until confirmed. Swap in the real cell reference here,
+      // e.g. addUnit(clean(sheet["XX"]?.v), "kg"), once known.
+      testLoad: null,
       acceptedCycles: clean(sheet["W27"]?.v),
     };
   }

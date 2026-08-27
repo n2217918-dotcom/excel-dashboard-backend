@@ -113,11 +113,9 @@ function readExcelFromBuffer(buffer, type, machineName) {
     return {
       ...base,
       bendingMovement: null,
-      // Test Load cell not decided yet for BI AXIAL — left blank on
-      // purpose until confirmed. Swap in the real cell reference here,
-      // e.g. addUnit(clean(sheet["XX"]?.v), "kg"), once known.
       testLoad: null,
-      acceptedCycles: clean(sheet["W27"]?.v),
+      testSpec: clean(sheet["W26"]?.v), // ★ ADDED: BI AXIAL Test Spec, pulled from W26
+      acceptedCycles: clean(sheet["W26"]?.v),
     };
   }
 

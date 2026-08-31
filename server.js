@@ -115,7 +115,7 @@ function readExcelFromBuffer(buffer, type, machineName) {
       bendingMovement: null,
       testLoad: null,
       testSpec: clean(sheet["W26"]?.v), // ★ ADDED: BI AXIAL Test Spec, pulled from W26
-      acceptedCycles: clean(sheet["W26"]?.v),
+      acceptedCycles: clean(sheet["W27"]?.v),
     };
   }
 

@@ -10,14 +10,20 @@ const { google } = require("googleapis");
 const app = express();
 
 // ---------------------------------------------------------------------
-// CHANGE 1: CORS is now restricted to your actual frontend's URL,
+// CHANGE 1: CORS is restricted to a specific list of allowed origins,
 // instead of allowing every website on the internet to call this API.
-// Set FRONTEND_URL in your .env file, e.g.:
-//   FRONTEND_URL=https://your-frontend-domain.com
+// FRONTEND_URL comes from your .env / Render Environment tab, and
+// localhost:5173 is included too so local development still works
+// against this same backend.
 // ---------------------------------------------------------------------
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+];
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: allowedOrigins,
   })
 );
 
@@ -52,7 +58,7 @@ const drive = google.drive({ version: "v3", auth });
 // ---------------------------------------------------------------------
 // CHANGE 3: The username/password are no longer written in the
 // frontend's JavaScript (where anyone could read them). They now live
-// in this backend's .env file instead — never sent to the browser.
+// in this backend's .env file instead - never sent to the browser.
 //
 // ADMIN_PASSWORD_HASH should be a bcrypt HASH, not the plain password.
 // To generate one, run this once in a Node console:
@@ -60,7 +66,7 @@ const drive = google.drive({ version: "v3", auth });
 //   bcrypt.hash("your-real-password", 10).then(console.log);
 // Then paste the result into your .env file as ADMIN_PASSWORD_HASH.
 //
-// This is still just ONE fixed account (no database yet, as agreed) —
+// This is still just ONE fixed account (no database yet, as agreed) -
 // but at minimum, the real password is no longer visible to anyone
 // who opens browser dev tools, and it's not stored in plain text
 // even here on the backend.
@@ -131,6 +137,8 @@ function readExcelFromBuffer(buffer, type, machineName) {
   const workbook = XLSX.read(buffer, { type: "buffer" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
 
+  // Test Reason comes from two merged cells (K16 and K17) combined.
+  // Empty pieces are filtered so a blank K17 doesn't leave a trailing space.
   const testReasonPart1 = clean(sheet["K16"]?.v);
   const testReasonPart2 = clean(sheet["K17"]?.v);
   const combinedTestReason = [testReasonPart1, testReasonPart2]
@@ -148,6 +156,8 @@ function readExcelFromBuffer(buffer, type, machineName) {
     return `${value} ${unit}`;
   }
 
+  /* ================= CFT ================= */
+
   if (type === "CFT") {
     return {
       ...base,
@@ -157,15 +167,19 @@ function readExcelFromBuffer(buffer, type, machineName) {
     };
   }
 
+  /* ================= BI AXIAL ================= */
+
   if (machineName === "BI AXIAL-LP" || machineName === "BI AXIAL-CV") {
     return {
       ...base,
       bendingMovement: null,
       testLoad: null,
-      testSpec: clean(sheet["W26"]?.v),
+      testSpec: clean(sheet["W26"]?.v), // BI AXIAL Test Spec, pulled from W26
       acceptedCycles: clean(sheet["W27"]?.v),
     };
   }
+
+  /* ================= RFT ================= */
 
   return {
     ...base,
